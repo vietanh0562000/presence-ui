@@ -75,8 +75,8 @@ jobs:
               --name presence-app \
               --restart unless-stopped \
               -p 5173:5173 \
-              -env VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }} \
-              -env VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }}
-              ghcr.io/${{ github.repository }}:latest \
+              -e VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }} \
+              -e VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }} \
+              ghcr.io/${{ github.repository }}:latest
 
             docker image prune -f
