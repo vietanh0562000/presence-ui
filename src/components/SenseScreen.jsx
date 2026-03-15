@@ -3,11 +3,12 @@
 // with quick-tap chips and a free-text textarea.
 
 import { useState, useEffect } from 'react'
-import { QUESTIONS } from '../data/questions'
+import { pickQuestions } from '../data/questions'
 import { saveDraft, clearDraft } from '../utils/storage'
 import PauseOverlay from './PauseOverlay'
 
 export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onComplete, onExit }) {
+  const [questions] = useState(() => pickQuestions())
   const [idx,     setIdx]     = useState(initialIdx)
   const [answers, setAnswers] = useState(initialAnswers)
   const [input,   setInput]   = useState('')
@@ -15,7 +16,7 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
   const [visible, setVisible] = useState(true)
   const [paused,  setPaused]  = useState(false)
 
-  const q = QUESTIONS[idx]
+  const q = questions[idx]
 
   // Auto-save after every answered question
   useEffect(() => { saveDraft(idx, answers) }, [idx, answers])
@@ -30,7 +31,7 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
     const updated = [...answers, { ...q, answer: ans }]
     setAnswers(updated)
 
-    if (idx + 1 >= QUESTIONS.length) {
+    if (idx + 1 >= questions.length) {
       clearDraft()
       onComplete(updated)
     } else {
@@ -74,7 +75,7 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
         {/* Top bar: progress dots + pause button */}
         <div className="sense-topbar">
           <div className="sense-progress">
-            {QUESTIONS.map((_, i) => (
+            {questions.map((_, i) => (
               <div
                 key={i}
                 className={`pdot ${i < idx ? 'pdot-done' : i === idx ? 'pdot-active' : ''}`}
@@ -87,7 +88,7 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
         </div>
 
         <div className="sense-number" style={fadeStyle}>
-          Sense {idx + 1} of {QUESTIONS.length}
+          Sense {idx + 1} of {questions.length}
         </div>
         <div className="sense-icon" style={fadeStyle}>{q.icon}</div>
         <div className="sense-question" style={fadeStyle}>{q.question}</div>
