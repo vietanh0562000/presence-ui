@@ -13,6 +13,7 @@ export default function Breathe({ onDone }) {
   const [instruction, setInstruction] = useState('Breathe in…')
   const [countText,   setCountText]   = useState(`${BREATH_CYCLES} breaths to begin`)
   const [opacity,     setOpacity]     = useState(1)
+  const [phase,       setPhase]       = useState('inhale')
   const count = useRef(0)
 
   const fade = useCallback((text) => {
@@ -27,9 +28,11 @@ export default function Breathe({ onDone }) {
     setCountText(remaining === 1 ? 'last breath' : `${remaining} breaths to begin`)
     fade('Breathe in…')
 
-    const t1 = setTimeout(() => fade('Hold…'),          INHALE_MS + 300)
-    const t2 = setTimeout(() => fade('Breathe out…'),   INHALE_MS + HOLD_MS + 600)
-    const t3 = setTimeout(() => { count.current++; run() }, INHALE_MS + HOLD_MS + EXHALE_MS + 600)
+    setPhase('inhale')
+
+    const t1 = setTimeout(() => {fade('Hold…'); setPhase('hold')},          INHALE_MS)
+    const t2 = setTimeout(() => {fade('Breathe out…'); setPhase('exhale')},   INHALE_MS + HOLD_MS)
+    const t3 = setTimeout(() => { count.current++; run() }, INHALE_MS + HOLD_MS + EXHALE_MS)
 
     return () => [t1, t2, t3].forEach(clearTimeout)
   }, [onDone, fade])
@@ -43,7 +46,7 @@ export default function Breathe({ onDone }) {
     <div className="screen breathe">
       <div className="breathe-label">First — just breathe</div>
 
-      <div className="breathe-circle-wrap">
+      <div className={`breathe-circle-wrap phase-${phase}`}>
         <div className="breathe-ring" />
         <div className="breathe-ring breathe-ring-2" />
         <div className="breathe-ring breathe-ring-3" />
