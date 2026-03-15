@@ -25,8 +25,10 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
   const qHint  = q[lang].hint
   const qChips = q[lang].chips
 
-  // Auto-save after every answered question
-  useEffect(() => { saveDraft(idx, answers, getToken) }, [idx, answers])
+  // Auto-save after every answered question.
+  // Only depend on `answers` — idx updates 280 ms later inside transition()
+  // and would fire a second redundant save if included here.
+  useEffect(() => { saveDraft(answers.length, answers, getToken) }, [answers])
 
   const transition = (cb) => {
     setVisible(false)
