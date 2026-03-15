@@ -8,7 +8,7 @@ import { pickQuestions } from '../data/questions'
 import { saveDraft, clearDraft } from '../utils/storage'
 import PauseOverlay from './PauseOverlay'
 
-export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onComplete, onExit }) {
+export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onComplete, onExit, getToken }) {
   const { lang, t } = useLanguage()
   const [questions] = useState(() => pickQuestions())
   const [idx,     setIdx]     = useState(initialIdx)
@@ -26,7 +26,7 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
   const qChips = q[lang].chips
 
   // Auto-save after every answered question
-  useEffect(() => { saveDraft(idx, answers) }, [idx, answers])
+  useEffect(() => { saveDraft(idx, answers, getToken) }, [idx, answers])
 
   const transition = (cb) => {
     setVisible(false)
@@ -36,10 +36,11 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
   const advance = (skip = false) => {
     const ans     = skip ? '—' : (input.trim() || '—')
     const updated = [...answers, { ...q, answer: ans }]
+    console.log('[presence] Recorded answer for', q.id, ':', ans)
     setAnswers(updated)
 
     if (idx + 1 >= questions.length) {
-      clearDraft()
+      clearDraft(getToken)
       onComplete(updated)
     } else {
       transition(() => { setIdx(idx + 1); setInput(''); setTapped([]) })
@@ -57,11 +58,11 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
   }
 
   const handleFinishNow = () => {
-    if (answers.length > 0) { clearDraft(); onComplete(answers) }
+    if (answers.length > 0) { clearDraft(getToken); onComplete(answers) }
   }
 
   const handleExit = () => {
-    saveDraft(idx, answers)
+    saveDraft(idx, answers, getToken)
     onExit()
   }
 

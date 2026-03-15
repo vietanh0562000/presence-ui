@@ -19,16 +19,25 @@ const FALLBACK = {
 
 // ─── Auth header helper ──────────────────────────────────────
 
-/**
- * Calls Clerk's getToken() to get a fresh JWT, returns fetch headers.
- * Pass `{ template: 'your-template' }` if you've set up a JWT template in Clerk.
- */
 async function authHeaders(getToken) {
   const token = await getToken()
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
   }
+}
+
+// ─── Answer normalizer ────────────────────────────────────────
+// Converts the frontend's bilingual question objects to the flat
+// { sense, icon, question, answer } shape the backend expects.
+
+function normalizeAnswers(answers) {
+  return answers.map(a => ({
+    sense:    typeof a.sense === 'object' ? (a.sense.en ?? '') : (a.sense ?? ''),
+    icon:     a.icon ?? '',
+    question: a.en?.question ?? (typeof a.question === 'string' ? a.question : ''),
+    answer:   a.answer ?? '—',
+  }))
 }
 
 // ─── Claude API ──────────────────────────────────────────────
@@ -46,9 +55,7 @@ export async function fetchReflection(answers, isPartial, lang = 'en') {
     ? 'Note: they only completed part of the exercise — acknowledge that briefly and warmly.'
     : ''
 
-  const langNote = lang === 'vi'
-    ? 'Write your response in Vietnamese.'
-    : ''
+  const langNote = lang === 'vi' ? 'Write your response in Vietnamese.' : ''
 
   const prompt = `Someone just did a mindfulness grounding exercise. Their observations:\n\n${summary}\n\n${partialNote}\n\nWrite one warm paragraph (3–4 sentences) reflecting their present moment back poetically. Second person. Brief and human. ${langNote}`.trim()
 
@@ -57,9 +64,9 @@ export async function fetchReflection(answers, isPartial, lang = 'en') {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        model:    CLAUDE_MODEL,
+        model:      CLAUDE_MODEL,
         max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }],
+        messages:   [{ role: 'user', content: prompt }],
       }),
     })
     const data = await res.json()
@@ -69,9 +76,80 @@ export async function fetchReflection(answers, isPartial, lang = 'en') {
   }
 }
 
+// ─── Draft API ────────────────────────────────────────────────
+// Drafts reuse the sessions collection (isPartial=true, no aiReflection).
+// The draft session ID is tracked by the caller (storage.js) so we can
+// PATCH the existing record instead of creating a new one every save.
+
+// draftId: existing session ID to PATCH, or null to POST a new one.
+// Returns the session ID (new or existing) so the caller can persist it.
+export async function saveDraftApi({ answers, draftId }, getToken) {
+  if (!answers?.length) return null
+
+  const body = JSON.stringify({
+    answers:        normalizeAnswers(answers),
+    isPartial:      true,
+    totalQuestions: 7,
+    aiReflection:   null,
+  })
+
+  try {
+    if (draftId) {
+      console.log(body)
+      await fetch(`${BACKEND_URL}/api/sessions/${draftId}`, {
+        method:  'PATCH',
+        headers: await authHeaders(getToken),
+        body,
+      })
+      return draftId
+    } else {
+      const res = await fetch(`${BACKEND_URL}/api/sessions`, {
+        method:  'POST',
+        headers: await authHeaders(getToken),
+        body,
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.id ?? null
+    }
+  } catch (err) {
+    console.error('[presence] saveDraftApi failed:', err)
+    return null
+  }
+}
+
+export async function loadDraftApi(getToken) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/sessions/latest-unfinished`, {
+      headers: await authHeaders(getToken),
+    })
+    if (!res.ok || res.status === 204) return null
+
+    const draft = await res.json()
+    return {
+      idx:     draft.answers?.length ?? 0,
+      answers: draft.answers,
+      savedAt: draft.updatedAt ? new Date(draft.updatedAt).getTime() : Date.now(),
+      _id:     draft.id,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function clearDraftApi(draftId, getToken) {
+  if (!draftId) return
+  try {
+    await fetch(`${BACKEND_URL}/api/sessions/${draftId}`, {
+      method:  'DELETE',
+      headers: await authHeaders(getToken),
+    })
+  } catch (err) {
+    console.error('[presence] clearDraftApi failed:', err)
+  }
+}
+
 // ─── Sessions API ─────────────────────────────────────────────
-// All functions take `getToken` as their last argument.
-// This is Clerk's `useAuth().getToken` — a function that returns a Promise<string>.
 
 export async function saveSession(session, getToken) {
   try {
@@ -80,7 +158,7 @@ export async function saveSession(session, getToken) {
       headers: await authHeaders(getToken),
       body:    JSON.stringify({
         date:           new Date().toISOString().split('T')[0],
-        answers:        session.answers,
+        answers:        normalizeAnswers(session.answers),
         moodTag:        session.moodTag || null,
         isPartial:      session.isPartial ?? false,
         totalQuestions: session.totalQuestions ?? 7,

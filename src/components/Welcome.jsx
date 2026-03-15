@@ -4,12 +4,12 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { timeAgo, clearDraft } from '../utils/storage'
 import { QUESTIONS } from '../data/questions'
 
-export default function Welcome({ onBegin, onResume, draft }) {
+export default function Welcome({ onBegin, onResume, draft, getToken }) {
   const { t } = useLanguage()
   const ago = draft ? timeAgo(draft.savedAt) : null
 
   const handleDiscard = () => {
-    clearDraft()
+    clearDraft(getToken)
     onBegin()
   }
 

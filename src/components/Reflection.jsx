@@ -28,6 +28,7 @@ export default function Reflection({ answers, onRestart }) {
   useEffect(() => {
     fetchReflection(answers, isPartial, lang)
       .then(text => {
+        console.log('[presence] AI reflection:', text)
         setAiRaw(text)
         // Step 2: save the session — Clerk token attached automatically
         persistSession(text)
@@ -36,6 +37,7 @@ export default function Reflection({ answers, onRestart }) {
   }, [])
 
   const persistSession = async (reflection) => {
+    console.log('[presence] Saving session with reflection:', reflection)
     setSaveStatus('saving')
     const saved = await saveSession(
       { answers, isPartial, totalQuestions: QUESTIONS.length, aiReflection: reflection },
@@ -50,6 +52,7 @@ export default function Reflection({ answers, onRestart }) {
   }
 
   const handleMood = async (m) => {
+    console.log('[presence] Setting mood to:', m)
     setMood(m)
     if (savedId) await updateMood(savedId, m, getToken)
   }

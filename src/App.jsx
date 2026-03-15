@@ -3,8 +3,8 @@
 // <SignedOut> shows Clerk's hosted sign-in page.
 // <SignedIn> renders the app — useUser() gives us the current user.
 
-import { useState } from 'react'
-import { SignedIn, SignedOut, RedirectToSignIn, useUser, useClerk } from '@clerk/clerk-react'
+import { useState, useEffect } from 'react'
+import { SignedIn, SignedOut, RedirectToSignIn, useUser, useClerk, useAuth } from '@clerk/clerk-react'
 import { useLanguage } from './contexts/LanguageContext'
 import ParticleCanvas from './components/ParticleCanvas'
 import Welcome        from './components/Welcome'
@@ -14,17 +14,26 @@ import Reflection     from './components/Reflection'
 import { loadDraft, clearDraft } from './utils/storage'
 
 function PresenceApp() {
-  const { user }    = useUser()
-  const { signOut } = useClerk()
-  const { t, toggle } = useLanguage()
+  const { user }       = useUser()
+  const { signOut }    = useClerk()
+  const { getToken }   = useAuth()
+  const { t, toggle }  = useLanguage()
 
   const [screen,        setScreen]        = useState('welcome')
   const [answers,       setAnswers]       = useState([])
   const [resumeIdx,     setResumeIdx]     = useState(0)
   const [resumeAnswers, setResumeAnswers] = useState([])
-  const [draft,         setDraft]         = useState(() => loadDraft())
+  const [draft,         setDraft]         = useState(null)
 
-  const goHome = () => { setDraft(loadDraft()); setScreen('welcome') }
+  // Load draft from API on mount (async)
+  useEffect(() => {
+    loadDraft(getToken).then(setDraft)
+  }, [])
+
+  const goHome = () => {
+    setScreen('welcome')
+    loadDraft(getToken).then(setDraft)
+  }
 
   const handleBegin = () => {
     setResumeIdx(0); setResumeAnswers([]); setScreen('breathe')
@@ -35,12 +44,18 @@ function PresenceApp() {
   }
 
   const handleRestart = () => {
-    clearDraft(); setDraft(null)
+    clearDraft(getToken); setDraft(null)
     setResumeIdx(0); setResumeAnswers([])
     setScreen('breathe')
   }
 
   const handleComplete = (ans) => { setAnswers(ans); setScreen('reflection') }
+
+  const handleSignOut = () => {
+    clearDraft(getToken)
+    localStorage.clear()
+    signOut()
+  }
 
   const topBarStyle = {
     position: 'fixed', top: 20, right: 20, zIndex: 10,
@@ -67,14 +82,14 @@ function PresenceApp() {
         <button onClick={toggle} style={dimBtnStyle}>
           {t.langToggle}
         </button>
-        <button onClick={() => signOut()} style={dimBtnStyle}>
+        <button onClick={handleSignOut} style={dimBtnStyle}>
           {t.signOut}
         </button>
       </div>
 
-      {screen === 'welcome'    && <Welcome    onBegin={handleBegin} onResume={handleResume} draft={draft} />}
+      {screen === 'welcome'    && <Welcome    onBegin={handleBegin} onResume={handleResume} draft={draft} getToken={getToken} />}
       {screen === 'breathe'    && <Breathe    onDone={() => setScreen('sense')} />}
-      {screen === 'sense'      && <SenseScreen initialIdx={resumeIdx} initialAnswers={resumeAnswers} onComplete={handleComplete} onExit={goHome} />}
+      {screen === 'sense'      && <SenseScreen initialIdx={resumeIdx} initialAnswers={resumeAnswers} onComplete={handleComplete} onExit={goHome} getToken={getToken} />}
       {screen === 'reflection' && <Reflection answers={answers} onRestart={handleRestart} />}
     </div>
   )
