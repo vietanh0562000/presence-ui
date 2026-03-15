@@ -3,11 +3,13 @@
 // with quick-tap chips and a free-text textarea.
 
 import { useState, useEffect } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 import { pickQuestions } from '../data/questions'
 import { saveDraft, clearDraft } from '../utils/storage'
 import PauseOverlay from './PauseOverlay'
 
 export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onComplete, onExit }) {
+  const { lang, t } = useLanguage()
   const [questions] = useState(() => pickQuestions())
   const [idx,     setIdx]     = useState(initialIdx)
   const [answers, setAnswers] = useState(initialAnswers)
@@ -17,6 +19,11 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
   const [paused,  setPaused]  = useState(false)
 
   const q = questions[idx]
+
+  // Localised question fields for the current language
+  const qText  = q[lang].question
+  const qHint  = q[lang].hint
+  const qChips = q[lang].chips
 
   // Auto-save after every answered question
   useEffect(() => { saveDraft(idx, answers) }, [idx, answers])
@@ -83,20 +90,20 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
             ))}
           </div>
           <button className="pause-trigger" onClick={() => setPaused(true)}>
-            pause ··
+            {t.pause}
           </button>
         </div>
 
         <div className="sense-number" style={fadeStyle}>
-          Sense {idx + 1} of {questions.length}
+          {t.senseOf(idx + 1, questions.length)}
         </div>
         <div className="sense-icon" style={fadeStyle}>{q.icon}</div>
-        <div className="sense-question" style={fadeStyle}>{q.question}</div>
-        <div className="sense-hint" style={fadeStyle}>{q.hint}</div>
+        <div className="sense-question" style={fadeStyle}>{qText}</div>
+        <div className="sense-hint" style={fadeStyle}>{qHint}</div>
 
-        {q.chips.length > 0 && (
+        {qChips.length > 0 && (
           <div className="quick-chips">
-            {q.chips.map(chip => (
+            {qChips.map(chip => (
               <div
                 key={chip}
                 className={`chip ${tapped.includes(chip) ? 'chip-tapped' : ''}`}
@@ -111,15 +118,15 @@ export default function SenseScreen({ initialIdx = 0, initialAnswers = [], onCom
         <textarea
           className="sense-textarea"
           rows={3}
-          placeholder="write freely…"
+          placeholder={t.writeFreely}
           value={input}
           onChange={e => setInput(e.target.value)}
           autoFocus
         />
 
         <div className="btn-row">
-          <button className="skip-btn" onClick={() => advance(true)}>skip</button>
-          <button className="next-btn" onClick={() => advance(false)}>Continue →</button>
+          <button className="skip-btn" onClick={() => advance(true)}>{t.skip}</button>
+          <button className="next-btn" onClick={() => advance(false)}>{t.continueBtn}</button>
         </div>
       </div>
     </>

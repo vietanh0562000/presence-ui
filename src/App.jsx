@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { SignedIn, SignedOut, RedirectToSignIn, useUser, useClerk } from '@clerk/clerk-react'
+import { useLanguage } from './contexts/LanguageContext'
 import ParticleCanvas from './components/ParticleCanvas'
 import Welcome        from './components/Welcome'
 import Breathe        from './components/Breathe'
@@ -15,6 +16,7 @@ import { loadDraft, clearDraft } from './utils/storage'
 function PresenceApp() {
   const { user }    = useUser()
   const { signOut } = useClerk()
+  const { t, toggle } = useLanguage()
 
   const [screen,        setScreen]        = useState('welcome')
   const [answers,       setAnswers]       = useState([])
@@ -40,29 +42,33 @@ function PresenceApp() {
 
   const handleComplete = (ans) => { setAnswers(ans); setScreen('reflection') }
 
+  const topBarStyle = {
+    position: 'fixed', top: 20, right: 20, zIndex: 10,
+    display: 'flex', alignItems: 'center', gap: 14,
+  }
+
+  const dimBtnStyle = {
+    background: 'none', border: 'none', color: 'var(--dim)',
+    fontSize: '.65rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+    cursor: 'pointer', fontFamily: "'Jost', sans-serif",
+  }
+
   return (
     <div className="presence-app">
       <ParticleCanvas />
 
-      {/* Top-right: first name + sign out */}
-      <div style={{
-        position: 'fixed', top: 20, right: 20, zIndex: 10,
-        display: 'flex', alignItems: 'center', gap: 14,
-      }}>
+      {/* Top-right: first name + language toggle + sign out */}
+      <div style={topBarStyle}>
         {user && (
           <span style={{ fontSize: '.68rem', color: 'var(--dim)', letterSpacing: '1px' }}>
             {user.firstName || user.emailAddresses?.[0]?.emailAddress}
           </span>
         )}
-        <button
-          onClick={() => signOut()}
-          style={{
-            background: 'none', border: 'none', color: 'var(--dim)',
-            fontSize: '.65rem', letterSpacing: '1.5px', textTransform: 'uppercase',
-            cursor: 'pointer', fontFamily: "'Jost', sans-serif",
-          }}
-        >
-          sign out
+        <button onClick={toggle} style={dimBtnStyle}>
+          {t.langToggle}
+        </button>
+        <button onClick={() => signOut()} style={dimBtnStyle}>
+          {t.signOut}
         </button>
       </div>
 

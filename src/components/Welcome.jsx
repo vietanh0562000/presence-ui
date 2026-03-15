@@ -1,9 +1,11 @@
 // src/components/Welcome.jsx
 
+import { useLanguage } from '../contexts/LanguageContext'
 import { timeAgo, clearDraft } from '../utils/storage'
 import { QUESTIONS } from '../data/questions'
 
 export default function Welcome({ onBegin, onResume, draft }) {
+  const { t } = useLanguage()
   const ago = draft ? timeAgo(draft.savedAt) : null
 
   const handleDiscard = () => {
@@ -14,22 +16,22 @@ export default function Welcome({ onBegin, onResume, draft }) {
   return (
     <div className="screen welcome">
       <div className="welcome-orb">🌿</div>
-      <div className="app-title">PRESENCE</div>
-      <div className="app-sub">a grounding ritual</div>
+      <div className="app-title">{t.appTitle}</div>
+      <div className="app-sub">{t.appSub}</div>
 
       <button className="begin-btn" onClick={onBegin}>
-        Begin
+        {t.begin}
       </button>
 
       {draft && (
         <div className="resume-banner">
-          <div className="resume-label">Unfinished session</div>
+          <div className="resume-label">{t.unfinishedSession}</div>
           <div className="resume-info">
-            {draft.answers.length} of {QUESTIONS.length} senses explored · {ago}
+            {t.sensesExplored(draft.answers.length, QUESTIONS.length, ago)}
           </div>
           <div className="resume-row">
-            <button className="resume-btn" onClick={onResume}>↩ Continue</button>
-            <button className="discard-btn" onClick={handleDiscard}>Start fresh</button>
+            <button className="resume-btn" onClick={onResume}>{t.continue}</button>
+            <button className="discard-btn" onClick={handleDiscard}>{t.startFresh}</button>
           </div>
         </div>
       )}

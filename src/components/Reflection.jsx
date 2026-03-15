@@ -4,12 +4,14 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useLanguage } from '../contexts/LanguageContext'
 import { QUESTIONS, MOODS } from '../data/questions'
 import { fetchReflection, saveSession, updateMood } from '../utils/api'
 import { useTyping } from '../hooks/useTyping'
 
 export default function Reflection({ answers, onRestart }) {
   const { getToken } = useAuth()
+  const { lang, t } = useLanguage()
 
   const [aiRaw,      setAiRaw]      = useState('')
   const [loading,    setLoading]    = useState(true)
@@ -24,7 +26,7 @@ export default function Reflection({ answers, onRestart }) {
 
   // Step 1: fetch reflection text from Claude
   useEffect(() => {
-    fetchReflection(answers, isPartial)
+    fetchReflection(answers, isPartial, lang)
       .then(text => {
         setAiRaw(text)
         // Step 2: save the session — Clerk token attached automatically
@@ -52,19 +54,21 @@ export default function Reflection({ answers, onRestart }) {
     if (savedId) await updateMood(savedId, m, getToken)
   }
 
+  const moods = MOODS[lang]
+
   return (
     <div className="screen reflection">
-      <div className="reflection-title">✦ Your moment, reflected</div>
+      <div className="reflection-title">{t.yourMomentReflected}</div>
 
       {isPartial && (
         <div className="partial-note">
-          {answers.length} of {QUESTIONS.length} senses · that's enough
+          {t.partialNote(answers.length, QUESTIONS.length)}
         </div>
       )}
 
       {/* AI reflection card */}
       <div className="rcard">
-        <h3>What Claude felt in your words</h3>
+        <h3>{t.whatClaudeFelt}</h3>
         <div className="ai-text">
           {loading ? (
             <div className="dots"><span /><span /><span /></div>
@@ -79,12 +83,12 @@ export default function Reflection({ answers, onRestart }) {
 
       {/* Sensory answers recap */}
       <div className="rcard">
-        <h3>Your senses, right now</h3>
+        <h3>{t.yourSensesNow}</h3>
         {real.map((a, i) => (
           <div key={i} className="answer-line">
             <div className="answer-icon">{a.icon}</div>
             <div>
-              <div className="answer-sense">{a.sense}</div>
+              <div className="answer-sense">{a.sense[lang] ?? a.sense}</div>
               <div className="answer-text">{a.answer}</div>
             </div>
           </div>
@@ -93,9 +97,9 @@ export default function Reflection({ answers, onRestart }) {
 
       {/* Mood picker */}
       <div className="rcard">
-        <h3>How do you feel in this moment?</h3>
+        <h3>{t.howDoYouFeel}</h3>
         <div className="mood-close">
-          {MOODS.map(m => (
+          {moods.map(m => (
             <button
               key={m}
               className={`mood-tag ${mood === m ? 'mood-tag-chosen' : ''}`}
@@ -109,13 +113,13 @@ export default function Reflection({ answers, onRestart }) {
 
       {/* Subtle save indicator */}
       <div style={{ fontSize: '.65rem', letterSpacing: '1.5px', color: 'var(--dim)', marginTop: '4px' }}>
-        {saveStatus === 'saving' && '◌ saving…'}
-        {saveStatus === 'saved'  && '✦ session saved'}
-        {saveStatus === 'error'  && '· saved locally only'}
+        {saveStatus === 'saving' && t.saving}
+        {saveStatus === 'saved'  && t.sessionSaved}
+        {saveStatus === 'error'  && t.savedLocallyOnly}
       </div>
 
       <button className="again-btn" onClick={onRestart}>
-        Begin again ↺
+        {t.beginAgain}
       </button>
     </div>
   )

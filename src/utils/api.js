@@ -12,7 +12,10 @@ const CLAUDE_API   = 'https://api.anthropic.com/v1/messages'
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514'
 const BACKEND_URL  = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
 
-const FALLBACK = 'You are here. Right now, in this body, in this light, breathing this air — you exist fully. That is enough. That has always been enough.'
+const FALLBACK = {
+  en: 'You are here. Right now, in this body, in this light, breathing this air — you exist fully. That is enough. That has always been enough.',
+  vi: 'Bạn đang ở đây. Ngay lúc này, trong cơ thể này, trong ánh sáng này, đang thở bầu không khí này — bạn tồn tại trọn vẹn. Như vậy là đủ. Như vậy luôn luôn là đủ.',
+}
 
 // ─── Auth header helper ──────────────────────────────────────
 
@@ -30,17 +33,24 @@ async function authHeaders(getToken) {
 
 // ─── Claude API ──────────────────────────────────────────────
 
-export async function fetchReflection(answers, isPartial) {
+export async function fetchReflection(answers, isPartial, lang = 'en') {
   const summary = answers
     .filter(a => a.answer !== '—')
-    .map(a => `${a.sense}: ${a.answer}`)
+    .map(a => {
+      const senseName = typeof a.sense === 'object' ? a.sense.en : a.sense
+      return `${senseName}: ${a.answer}`
+    })
     .join('\n')
 
   const partialNote = isPartial
     ? 'Note: they only completed part of the exercise — acknowledge that briefly and warmly.'
     : ''
 
-  const prompt = `Someone just did a mindfulness grounding exercise. Their observations:\n\n${summary}\n\n${partialNote}\n\nWrite one warm paragraph (3–4 sentences) reflecting their present moment back poetically. Second person. Brief and human.`
+  const langNote = lang === 'vi'
+    ? 'Write your response in Vietnamese.'
+    : ''
+
+  const prompt = `Someone just did a mindfulness grounding exercise. Their observations:\n\n${summary}\n\n${partialNote}\n\nWrite one warm paragraph (3–4 sentences) reflecting their present moment back poetically. Second person. Brief and human. ${langNote}`.trim()
 
   try {
     const res  = await fetch(CLAUDE_API, {
@@ -53,9 +63,9 @@ export async function fetchReflection(answers, isPartial) {
       }),
     })
     const data = await res.json()
-    return data.content?.[0]?.text || FALLBACK
+    return data.content?.[0]?.text || FALLBACK[lang]
   } catch {
-    return FALLBACK
+    return FALLBACK[lang]
   }
 }
 

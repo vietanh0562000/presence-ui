@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ClerkProvider } from '@clerk/clerk-react'
+import { LanguageProvider } from './contexts/LanguageContext'
 import App from './App'
 import './styles/global.css'
 
@@ -13,7 +14,9 @@ if (!PUBLISHABLE_KEY) {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <App />
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
     </ClerkProvider>
   </React.StrictMode>
 )
